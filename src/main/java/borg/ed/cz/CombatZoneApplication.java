@@ -21,9 +21,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
 import borg.ed.cz.gui.CombatControlFrame;
-import borg.ed.universe.UniverseApplication;
-import borg.ed.universe.journal.JournalReaderThread;
-import borg.ed.universe.journal.StatusReaderThread;
+import borg.ed.galaxy.GalaxyApplication;
+import borg.ed.galaxy.journal.JournalReaderThread;
+import borg.ed.galaxy.journal.StatusReaderThread;
 
 /**
  * CombatZoneApplication
@@ -31,7 +31,7 @@ import borg.ed.universe.journal.StatusReaderThread;
  * @author <a href="mailto:boris.guenther@redteclab.com">Boris Guenther</a>
  */
 @Configuration
-@Import(UniverseApplication.class)
+@Import(GalaxyApplication.class)
 public class CombatZoneApplication {
 
     static final Logger logger = LoggerFactory.getLogger(CombatZoneApplication.class);

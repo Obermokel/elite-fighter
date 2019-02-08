@@ -15,10 +15,10 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.SwingConstants;
 
-import borg.ed.universe.journal.JournalUpdateListener;
-import borg.ed.universe.journal.Status;
-import borg.ed.universe.journal.StatusUpdateListener;
-import borg.ed.universe.journal.events.AbstractJournalEvent;
+import borg.ed.galaxy.journal.JournalUpdateListener;
+import borg.ed.galaxy.journal.Status;
+import borg.ed.galaxy.journal.StatusUpdateListener;
+import borg.ed.galaxy.journal.events.AbstractJournalEvent;
 
 /**
  * CombatControlFrame

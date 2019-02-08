@@ -13,11 +13,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import borg.ed.cz.activities.Activity;
-import borg.ed.universe.journal.JournalUpdateListener;
-import borg.ed.universe.journal.Status;
-import borg.ed.universe.journal.StatusUpdateListener;
-import borg.ed.universe.journal.events.AbstractJournalEvent;
-import borg.ed.universe.journal.events.ShipTargetedEvent;
+import borg.ed.galaxy.journal.JournalUpdateListener;
+import borg.ed.galaxy.journal.Status;
+import borg.ed.galaxy.journal.StatusUpdateListener;
+import borg.ed.galaxy.journal.events.AbstractJournalEvent;
+import borg.ed.galaxy.journal.events.ShipTargetedEvent;
 
 /**
  * CombatZoneThread
