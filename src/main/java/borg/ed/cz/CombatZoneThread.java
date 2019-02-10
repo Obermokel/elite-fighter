@@ -21,8 +21,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 
+import borg.ed.cz.data.GameStatus;
+import borg.ed.cz.data.GameStatusListener;
 import borg.ed.cz.data.ScannedShip;
-import borg.ed.cz.data.ScannedShipsListener;
 import borg.ed.cz.tasks.DeployFighterTask;
 import borg.ed.cz.tasks.EmergencyExitTask;
 import borg.ed.cz.tasks.GiveFighterOrderAttackTask;
@@ -61,14 +62,9 @@ public class CombatZoneThread extends Thread implements JournalUpdateListener, S
 	@Autowired
 	private ApplicationContext appctx = null;
 
-	private int nBuggys = 0;
-	private int nFighters = 0;
-	private int lastFighterDeployed = 0;
-	private boolean fighterDeployed = false;
-	private boolean fighterRebuilt = true;
-	private ScannedShip targetedShip = null;
-	private List<ScannedShip> scannedShips = new ArrayList<>();
-	private List<ScannedShipsListener> scannedShipsListeners = new ArrayList<>();
+	private GameStatus gameStatus = new GameStatus();
+
+	private List<GameStatusListener> gameStatusListeners = new ArrayList<>();
 
 	public CombatZoneThread() {
 		this.setName("CZThread");
@@ -107,17 +103,17 @@ public class CombatZoneThread extends Thread implements JournalUpdateListener, S
 
 	private void handleGameState() {
 		// Can we deploy a fighter?
-		if (this.fighterDeployed == false && this.fighterRebuilt == true) {
+		if (this.gameStatus.isFighterDeployed() == false && this.gameStatus.isFighterRebuilt() == true) {
 			logger.info("Deploying a new fighter");
-			this.taskPool.execute(this.appctx.getBean(DeployFighterTask.class).setData(nBuggys, nFighters, lastFighterDeployed));
+			this.taskPool.execute(this.appctx.getBean(DeployFighterTask.class).setData(this.gameStatus.getNBuggys(), this.gameStatus.getNFighters(), this.gameStatus.getLastFighterDeployed()));
 
-			this.fighterRebuilt = false;
-			if (this.lastFighterDeployed == 0) {
-				this.lastFighterDeployed = 1;
-			} else if (this.lastFighterDeployed == 1 && this.nFighters == 2) {
-				this.lastFighterDeployed = 2;
+			this.gameStatus.setFighterRebuilt(false);
+			if (this.gameStatus.getLastFighterDeployed() == 0) {
+				this.gameStatus.setLastFighterDeployed(1);
+			} else if (this.gameStatus.getLastFighterDeployed() == 1 && this.gameStatus.getNFighters() == 2) {
+				this.gameStatus.setLastFighterDeployed(2);
 			} else {
-				this.lastFighterDeployed = 1;
+				this.gameStatus.setLastFighterDeployed(1);
 			}
 		}
 
@@ -134,7 +130,7 @@ public class CombatZoneThread extends Thread implements JournalUpdateListener, S
 	private boolean isMostPromisingShipTargeted() {
 		ScannedShip ship = this.lookupMostPromisingShip();
 
-		return ship != null && ship.equals(this.targetedShip);
+		return ship != null && ship.equals(this.gameStatus.getTargetedShip());
 	}
 
 	/**
@@ -143,10 +139,10 @@ public class CombatZoneThread extends Thread implements JournalUpdateListener, S
 	 * @return <code>null</code> if none exists at all
 	 */
 	private ScannedShip lookupMostPromisingShip() {
-		if (this.scannedShips.isEmpty()) {
+		if (this.gameStatus.getScannedShips().isEmpty()) {
 			return null;
 		} else {
-			List<ScannedShip> bountyShips = this.scannedShips.stream().filter(s -> s.getBounty() != null && s.getBounty().intValue() > 0).collect(Collectors.toList()); // Keep only ship having a bounty
+			List<ScannedShip> bountyShips = this.gameStatus.getScannedShips().stream().filter(s -> s.getBounty() != null && s.getBounty().intValue() > 0).collect(Collectors.toList()); // Keep only ship having a bounty
 			List<ScannedShip> sortedShips = this.sortShips(bountyShips);
 
 			if (sortedShips.isEmpty()) {
@@ -167,16 +163,20 @@ public class CombatZoneThread extends Thread implements JournalUpdateListener, S
 			logger.info("Under attack! Selecting highest threat.");
 			this.taskPool.execute(this.appctx.getBean(SelectHighestThreatTask.class));
 		} else if (event instanceof DockFighterEvent) {
-			this.fighterDeployed = false;
-			this.fighterRebuilt = true;
+			this.gameStatus.setFighterDeployed(false);
+			this.gameStatus.setFighterRebuilt(true);
+			this.invokeGameStatusListeners();
 		} else if (event instanceof FighterDestroyedEvent) {
-			this.fighterDeployed = false;
-			this.fighterRebuilt = false;
+			this.gameStatus.setFighterDeployed(false);
+			this.gameStatus.setFighterRebuilt(false);
+			this.invokeGameStatusListeners();
 		} else if (event instanceof LaunchFighterEvent) {
-			this.fighterDeployed = true;
-			this.fighterRebuilt = false;
+			this.gameStatus.setFighterDeployed(true);
+			this.gameStatus.setFighterRebuilt(false);
+			this.invokeGameStatusListeners();
 		} else if (event instanceof FighterRebuiltEvent) {
-			this.fighterRebuilt = true;
+			this.gameStatus.setFighterRebuilt(true);
+			this.invokeGameStatusListeners();
 		} else if (event instanceof CommitCrimeEvent) {
 			this.doEmergencyExit("Committed a crime! Emergency exit!");
 		} else if (event instanceof LoadoutEvent) {
@@ -185,28 +185,31 @@ public class CombatZoneThread extends Thread implements JournalUpdateListener, S
 	}
 
 	private void onLoadoutChange(LoadoutEvent event) {
-		this.nBuggys = 0;
-		this.nFighters = 0;
+		int nBuggys = 0;
+		int nFighters = 0;
 		for (Module module : event.getModules()) {
 			if (module.getItem().contains("buggybay")) {
 				if (module.getItem().contains("size2")) {
-					this.nBuggys += 1;
+					nBuggys += 1;
 				} else if (module.getItem().contains("size4")) {
-					this.nBuggys += 2;
+					nBuggys += 2;
 				} else if (module.getItem().contains("size6")) {
-					this.nBuggys += 3;
+					nBuggys += 3;
 				}
 			} else if (module.getItem().contains("fighterbay")) {
 				if (module.getItem().contains("size5")) {
-					this.nFighters += 1;
+					nFighters += 1;
 				} else if (module.getItem().contains("size6")) {
-					this.nFighters += 2;
+					nFighters += 2;
 				} else if (module.getItem().contains("size7")) {
-					this.nFighters += 2;
+					nFighters += 2;
 				}
 			}
 		}
-		logger.debug("Loadout changed. Buggys: " + this.nBuggys + "; Fighters: " + this.nFighters);
+		this.gameStatus.setNBuggys(nBuggys);
+		this.gameStatus.setNFighters(nFighters);
+		logger.debug("Loadout changed. Buggys: " + nBuggys + "; Fighters: " + nFighters);
+		this.invokeGameStatusListeners();
 	}
 
 	private void doEmergencyExit(String message) {
@@ -218,16 +221,16 @@ public class CombatZoneThread extends Thread implements JournalUpdateListener, S
 	private void onShipTargetedEvent(ShipTargetedEvent event) {
 		if (!Boolean.TRUE.equals(event.getTargetLocked())) {
 			// Target lost
-			this.targetedShip = null;
-			this.updateScannedShips(this.targetedShip);
+			this.gameStatus.setTargetedShip(null);
+			this.updateScannedShips(this.gameStatus.getTargetedShip());
 		} else {
 			// Update data
-			this.targetedShip = ScannedShip.fromShipTargetedEvent(event);
-			this.updateScannedShips(this.targetedShip);
+			this.gameStatus.setTargetedShip(ScannedShip.fromShipTargetedEvent(event));
+			this.updateScannedShips(this.gameStatus.getTargetedShip());
 
 			// Give a fighter order?
-			if (this.isMostPromisingShipTargeted() && this.fighterDeployed) {
-				logger.info("Ordering fighter to attack " + this.targetedShip);
+			if (this.isMostPromisingShipTargeted() && this.gameStatus.isFighterDeployed()) {
+				logger.info("Ordering fighter to attack " + this.gameStatus.getTargetedShip());
 				this.taskPool.execute(this.appctx.getBean(GiveFighterOrderAttackTask.class));
 			}
 		}
@@ -235,7 +238,7 @@ public class CombatZoneThread extends Thread implements JournalUpdateListener, S
 
 	private void onBountyEvent(BountyEvent event) {
 		// Remove from scanned ships
-		ListIterator<ScannedShip> it = this.scannedShips.listIterator();
+		ListIterator<ScannedShip> it = this.gameStatus.getScannedShips().listIterator();
 		String shipType = MiscUtil.getAsString(event.getTarget(), "unknown");
 		int reward = MiscUtil.getAsInt(event.getTotalReward(), 0);
 		while (it.hasNext()) {
@@ -247,8 +250,8 @@ public class CombatZoneThread extends Thread implements JournalUpdateListener, S
 		}
 
 		// Also reset target
-		if (this.isSameShip(this.targetedShip, shipType, reward)) {
-			this.targetedShip = null;
+		if (this.isSameShip(this.gameStatus.getTargetedShip(), shipType, reward)) {
+			this.gameStatus.setTargetedShip(null);
 		}
 	}
 
@@ -266,7 +269,7 @@ public class CombatZoneThread extends Thread implements JournalUpdateListener, S
 	private void updateScannedShips(ScannedShip justTargetedShip) {
 		// Remove outdated ships
 		final long now = System.currentTimeMillis();
-		ListIterator<ScannedShip> it = this.scannedShips.listIterator();
+		ListIterator<ScannedShip> it = this.gameStatus.getScannedShips().listIterator();
 		while (it.hasNext()) {
 			ScannedShip ship = it.next();
 			if (now - ship.getLastSeen() > 300_000) {
@@ -278,16 +281,14 @@ public class CombatZoneThread extends Thread implements JournalUpdateListener, S
 
 		// Add the new ship
 		if (justTargetedShip != null) {
-			this.scannedShips.add(justTargetedShip);
+			this.gameStatus.getScannedShips().add(justTargetedShip);
 		}
 
 		// Sort
-		this.scannedShips = this.sortShips(this.scannedShips);
+		this.gameStatus.setScannedShips(this.sortShips(this.gameStatus.getScannedShips()));
 
 		// Notify
-		for (ScannedShipsListener listener : this.scannedShipsListeners) {
-			listener.onNewScannedShips(this.scannedShips);
-		}
+		this.invokeGameStatusListeners();
 	}
 
 	private List<ScannedShip> sortShips(List<ScannedShip> ships) {
@@ -335,19 +336,25 @@ public class CombatZoneThread extends Thread implements JournalUpdateListener, S
 		}
 	}
 
-	public boolean addListener(ScannedShipsListener listener) {
-		if (listener == null || this.scannedShipsListeners.contains(listener)) {
+	public boolean addListener(GameStatusListener listener) {
+		if (listener == null || this.gameStatusListeners.contains(listener)) {
 			return false;
 		} else {
-			return this.scannedShipsListeners.add(listener);
+			return this.gameStatusListeners.add(listener);
 		}
 	}
 
-	public boolean removeListener(ScannedShipsListener listener) {
+	public boolean removeListener(GameStatusListener listener) {
 		if (listener == null) {
 			return false;
 		} else {
-			return this.scannedShipsListeners.remove(listener);
+			return this.gameStatusListeners.remove(listener);
+		}
+	}
+
+	private void invokeGameStatusListeners() {
+		for (GameStatusListener listener : this.gameStatusListeners) {
+			listener.onNewGameStatus(this.gameStatus);
 		}
 	}
 

@@ -11,16 +11,17 @@ import java.awt.event.KeyListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.math.BigDecimal;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedList;
-import java.util.List;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.SwingConstants;
 
+import borg.ed.cz.data.GameStatus;
+import borg.ed.cz.data.GameStatusListener;
 import borg.ed.cz.data.ScannedShip;
-import borg.ed.cz.data.ScannedShipsListener;
 import borg.ed.galaxy.journal.JournalUpdateListener;
 import borg.ed.galaxy.journal.Status;
 import borg.ed.galaxy.journal.StatusUpdateListener;
@@ -34,7 +35,7 @@ import borg.ed.galaxy.journal.events.ShipTargetedEvent;
  *
  * @author <a href="mailto:boris.guenther@redteclab.com">Boris Guenther</a>
  */
-public class CombatControlFrame extends JFrame implements WindowListener, KeyListener, JournalUpdateListener, StatusUpdateListener, ScannedShipsListener {
+public class CombatControlFrame extends JFrame implements WindowListener, KeyListener, JournalUpdateListener, StatusUpdateListener, GameStatusListener {
 
 	private static final long serialVersionUID = 4349890395389987402L;
 
@@ -44,6 +45,7 @@ public class CombatControlFrame extends JFrame implements WindowListener, KeyLis
 	private static final String SPAN_CLOSE = "</span>";
 
 	private final JLabel lblStatus;
+	private final JLabel lblGameStatus;
 	private final JLabel lblJournal;
 	private final JLabel lblScannedShips;
 
@@ -54,6 +56,8 @@ public class CombatControlFrame extends JFrame implements WindowListener, KeyLis
 
 		this.lblStatus = new JLabel();
 		this.lblStatus.setVerticalAlignment(SwingConstants.TOP);
+		this.lblGameStatus = new JLabel();
+		this.lblGameStatus.setVerticalAlignment(SwingConstants.TOP);
 		this.lblJournal = new JLabel();
 		this.lblJournal.setVerticalAlignment(SwingConstants.TOP);
 		this.lblScannedShips = new JLabel();
@@ -63,6 +67,7 @@ public class CombatControlFrame extends JFrame implements WindowListener, KeyLis
 		this.addWindowListener(this);
 		this.setLayout(new BorderLayout());
 		this.add(this.lblStatus, BorderLayout.WEST);
+		this.add(this.lblGameStatus, BorderLayout.EAST);
 		this.add(this.lblJournal, BorderLayout.SOUTH);
 		this.add(this.lblScannedShips, BorderLayout.CENTER);
 		this.setSize(400, 200);
@@ -147,12 +152,26 @@ public class CombatControlFrame extends JFrame implements WindowListener, KeyLis
 	}
 
 	@Override
-	public void onNewScannedShips(List<ScannedShip> scannedShips) {
-		StringBuilder text = new StringBuilder();
-		for (ScannedShip ship : scannedShips) {
-			text.append(ship.toHtmlString() + "\n");
+	public void onNewGameStatus(GameStatus status) {
+		StringBuilder scannedShips = new StringBuilder();
+		for (ScannedShip ship : status.getScannedShips()) {
+			scannedShips.append(ship.toHtmlString() + "\n");
 		}
-		this.lblScannedShips.setText("<html>" + text.toString().trim().replace("\n", "<br>") + "</html>");
+		this.lblScannedShips.setText("<html>" + scannedShips.toString().trim().replace("\n", "<br>") + "</html>");
+
+		StringBuilder text = new StringBuilder("<html>");
+
+		text.append(ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT)).append("<br>");
+
+		text.append("<br>").append("Buggys: ").append(status.getNBuggys());
+		text.append("<br>").append("Fighters: ").append(status.getNFighters());
+		text.append("<br>").append("Last fighter: ").append(status.getLastFighterDeployed());
+		text.append("<br>").append(status.isFighterDeployed() ? SPAN_ACTIVE : SPAN_INACTIVE).append("Fighter deployed").append(SPAN_CLOSE);
+		text.append("<br>").append(status.isFighterRebuilt() ? SPAN_ACTIVE : SPAN_INACTIVE).append("Fighter rebuilt").append(SPAN_CLOSE);
+
+		text.append("</html>");
+
+		this.lblGameStatus.setText(text.toString());
 	}
 
 	@Override
