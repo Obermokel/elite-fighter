@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 
@@ -32,58 +33,68 @@ import borg.ed.galaxy.journal.StatusReaderThread;
  */
 @Configuration
 @Import(GalaxyApplication.class)
+@ComponentScan(basePackages = { "borg.ed.cz.tasks" })
 public class CombatZoneApplication {
 
-    static final Logger logger = LoggerFactory.getLogger(CombatZoneApplication.class);
+	static final Logger logger = LoggerFactory.getLogger(CombatZoneApplication.class);
 
-    public static final ApplicationContext APPCTX = new AnnotationConfigApplicationContext(CombatZoneApplication.class);
+	public static final ApplicationContext APPCTX = new AnnotationConfigApplicationContext(CombatZoneApplication.class);
 
-    public static void main(String[] args) throws IOException {
-        try {
-            UIManager.setLookAndFeel("com.jtattoo.plaf.noire.NoireLookAndFeel");
-        } catch (Exception e) {
-            // Ignore
-        }
+	public static void main(String[] args) throws IOException {
+		try {
+			UIManager.setLookAndFeel("com.jtattoo.plaf.noire.NoireLookAndFeel");
+		} catch (Exception e) {
+			logger.error("Failed to set look & feel", e);
+		}
 
-        // Start the main combat zone thread
-        CombatZoneThread combatZoneThread = APPCTX.getBean(CombatZoneThread.class);
-        combatZoneThread.start();
+		// Create the main combat zone thread
+		CombatZoneThread combatZoneThread = APPCTX.getBean(CombatZoneThread.class);
 
-        // Start all event-generating threads
-        JournalReaderThread journalReaderThread = APPCTX.getBean(JournalReaderThread.class);
-        journalReaderThread.addListener(combatZoneThread);
-        journalReaderThread.start();
-        StatusReaderThread statusReaderThread = APPCTX.getBean(StatusReaderThread.class);
-        statusReaderThread.addListener(combatZoneThread);
-        statusReaderThread.start();
+		// Open the GUI
+		CombatControlFrame combatControlFrame = APPCTX.getBean(CombatControlFrame.class);
+		combatControlFrame.setVisible(true);
 
-        // Open the GUI
-        CombatControlFrame combatControlFrame = APPCTX.getBean(CombatControlFrame.class);
-        combatControlFrame.setVisible(true);
+		// Listen to scanned ships
+		combatZoneThread.addListener(combatControlFrame);
 
-        // Add listeners
-        journalReaderThread.addListener(combatControlFrame);
+		// Start all event-generating threads
+		JournalReaderThread journalReaderThread = APPCTX.getBean(JournalReaderThread.class);
+		journalReaderThread.addListener(combatZoneThread);
+		journalReaderThread.addListener(combatControlFrame);
+		journalReaderThread.start();
+		StatusReaderThread statusReaderThread = APPCTX.getBean(StatusReaderThread.class);
+		statusReaderThread.addListener(combatZoneThread);
+		statusReaderThread.addListener(combatControlFrame);
+		statusReaderThread.start();
 
-        statusReaderThread.addListener(combatControlFrame);
-    }
+		// Wait for GUI and Journal
+		try {
+			Thread.sleep(10000);
+		} catch (InterruptedException e) {
+			return;
+		}
 
-    @Bean
-    public CombatControlFrame combatControlFrame() {
-        return new CombatControlFrame();
-    }
+		// Start the main combat zone thread
+		combatZoneThread.start();
+	}
 
-    @Bean
-    public CombatZoneThread combatZoneThread() {
-        return new CombatZoneThread();
-    }
+	@Bean
+	public CombatControlFrame combatControlFrame() {
+		return new CombatControlFrame();
+	}
 
-    @Bean
-    public Robot robot() {
-        try {
-            return new Robot(GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice());
-        } catch (AWTException e) {
-            throw new RuntimeException("Failed to obtain a robot", e);
-        }
-    }
+	@Bean
+	public CombatZoneThread combatZoneThread() {
+		return new CombatZoneThread();
+	}
+
+	@Bean
+	public Robot robot() {
+		try {
+			return new Robot(GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice());
+		} catch (AWTException e) {
+			throw new RuntimeException("Failed to obtain a robot", e);
+		}
+	}
 
 }
