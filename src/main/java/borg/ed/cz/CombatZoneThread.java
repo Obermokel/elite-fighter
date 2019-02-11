@@ -188,20 +188,21 @@ public class CombatZoneThread extends Thread implements JournalUpdateListener, S
 		int nBuggys = 0;
 		int nFighters = 0;
 		for (Module module : event.getModules()) {
-			if (module.getItem().contains("buggybay")) {
-				if (module.getItem().contains("size2")) {
+			String item = module.getItem().toLowerCase();
+			if (item.contains("buggybay")) {
+				if (item.contains("size2")) {
 					nBuggys += 1;
-				} else if (module.getItem().contains("size4")) {
+				} else if (item.contains("size4")) {
 					nBuggys += 2;
-				} else if (module.getItem().contains("size6")) {
+				} else if (item.contains("size6")) {
 					nBuggys += 3;
 				}
-			} else if (module.getItem().contains("fighterbay")) {
-				if (module.getItem().contains("size5")) {
+			} else if (item.contains("fighterbay")) {
+				if (item.contains("size5")) {
 					nFighters += 1;
-				} else if (module.getItem().contains("size6")) {
+				} else if (item.contains("size6")) {
 					nFighters += 2;
-				} else if (module.getItem().contains("size7")) {
+				} else if (item.contains("size7")) {
 					nFighters += 2;
 				}
 			}

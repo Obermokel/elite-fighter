@@ -44,7 +44,8 @@ public class DeployFighterTask extends Thread {
 			} else {
 				// Open role panel
 				nBack++;
-				Thread.sleep(this.shipControl.uiBottomPanel() + 50 + this.random.nextInt(100));
+				logger.debug("Open role panel");
+				Thread.sleep(this.shipControl.uiBottomPanel() + 2000 + this.random.nextInt(100));
 
 				//				// Skip over buggys
 				//				if (this.lastFighterDeployed == 0) {
@@ -55,28 +56,38 @@ public class DeployFighterTask extends Thread {
 
 				// Hover over fighter to deploy
 				if (this.lastFighterDeployed == 0) {
-					Thread.sleep(this.shipControl.uiDown() + 50 + this.random.nextInt(100));
+					logger.debug("First time deploy: 1x down");
+					Thread.sleep(this.shipControl.uiDown() + 2000 + this.random.nextInt(100));
 				} else if (this.lastFighterDeployed == 1 && this.nFighters == 2) {
-					Thread.sleep(this.shipControl.uiDown() + 50 + this.random.nextInt(100));
+					logger.debug("Alternate deploy: 1x down");
+					Thread.sleep(this.shipControl.uiDown() + 2000 + this.random.nextInt(100));
 				} else if (this.lastFighterDeployed == 2 && this.nFighters == 2) {
-					Thread.sleep(this.shipControl.uiUp() + 50 + this.random.nextInt(100));
+					logger.debug("Alternate deploy: 1x up");
+					Thread.sleep(this.shipControl.uiUp() + 2000 + this.random.nextInt(100));
 				}
 
 				// Select fighter, click on deploy
 				nBack++;
-				Thread.sleep(this.shipControl.uiSelect() + 50 + this.random.nextInt(100));
-				Thread.sleep(this.shipControl.uiSelect() + 50 + this.random.nextInt(100));
+				logger.debug("Click on fighter");
+				Thread.sleep(this.shipControl.uiSelect() + 2000 + this.random.nextInt(100));
+				logger.debug("Click on deploy");
+				Thread.sleep(this.shipControl.uiSelect() + 2000 + this.random.nextInt(100));
 
 				// If this is the first time move down to select the NPC
 				if (this.lastFighterDeployed == 0) {
-					Thread.sleep(this.shipControl.uiDown() + 50 + this.random.nextInt(100));
+					logger.debug("First time deploy: 1x down for NPC");
+					Thread.sleep(this.shipControl.uiDown() + 2000 + this.random.nextInt(100));
 				}
 
 				// Select to actually deploy the fighter
-				Thread.sleep(this.shipControl.uiSelect() + 50 + this.random.nextInt(100));
+				logger.debug("Click on pilot");
+				Thread.sleep(this.shipControl.uiSelect() + 2000 + this.random.nextInt(100));
 
 				// Close the role panel
-				Thread.sleep(this.shipControl.uiBack() + 50 + this.random.nextInt(100));
+				logger.debug("Close role panel");
+				Thread.sleep(this.shipControl.uiBottomPanel() + 2000 + this.random.nextInt(100));
+				logger.debug("UI back");
+				Thread.sleep(this.shipControl.uiBack() + 2000 + this.random.nextInt(100));
 			}
 		} catch (InterruptedException e) {
 			// UI back for n times, then quit
