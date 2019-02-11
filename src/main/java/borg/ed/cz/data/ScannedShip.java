@@ -8,6 +8,8 @@ package borg.ed.cz.data;
 import java.math.BigDecimal;
 import java.util.Locale;
 
+import org.apache.commons.lang.time.DurationFormatUtils;
+
 import borg.ed.galaxy.journal.events.ShipTargetedEvent;
 import borg.ed.galaxy.util.MiscUtil;
 import lombok.Getter;
@@ -21,6 +23,8 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ScannedShip {
+
+	private Integer ScanStage = null;
 
 	/**
 	 * Available from: Stage 0
@@ -56,6 +60,7 @@ public class ScannedShip {
 
 	public static ScannedShip fromShipTargetedEvent(ShipTargetedEvent event) {
 		ScannedShip ship = new ScannedShip();
+		ship.setScanStage(event.getScanStage());
 		ship.setShip(event.getShip());
 		ship.setPilotName(event.getPilotName_Localised());
 		ship.setPilotRank(event.getPilotRank());
@@ -81,13 +86,14 @@ public class ScannedShip {
 		String bountyRed = "<span style=\"color: " + red(MiscUtil.getAsInt(this.bounty, 0) / 200_000f) + ";\">";
 		String shieldBlue = "<span style=\"color: " + blue(MiscUtil.getAsInt(this.ShieldHealth, 100) / 100f) + ";\">";
 		String hullOrange = "<span style=\"color: " + orange(MiscUtil.getAsInt(this.HullHealth, 100) / 100f) + ";\">";
-		return String.format(Locale.US, "%s %s (%s, " + bountyRed + "%,d CR bounty</span>, " + shieldBlue + "S:%d%%</span>, " + hullOrange + "H:%d%%</span>)", // Deadly Anaconda (Harry Potter, 241,500 CR bounty, S:62%, H:100%)
+		return String.format(Locale.US, "%s %s (%s, " + bountyRed + "%,d CR bounty</span>, " + shieldBlue + "S:%d%%</span>, " + hullOrange + "H:%d%%</span>, %s)", // Deadly Anaconda (Harry Potter, 241,500 CR bounty, S:62%, H:100%)
 				MiscUtil.getAsString(this.pilotRank, "??RANK??"), // rank
 				MiscUtil.getAsString(this.ship, "??SHIP??"), // ship
 				MiscUtil.getAsString(this.pilotName, "??PILOT??"), // pilot
 				MiscUtil.getAsInt(this.bounty, 0), // bounty
 				MiscUtil.getAsInt(this.ShieldHealth, null), // shield
-				MiscUtil.getAsInt(this.HullHealth, null)); // hull
+				MiscUtil.getAsInt(this.HullHealth, null), // hull
+				DurationFormatUtils.formatDuration(System.currentTimeMillis() - this.lastSeen, "m:ss"));
 	}
 
 	private static String red(float percent) {
