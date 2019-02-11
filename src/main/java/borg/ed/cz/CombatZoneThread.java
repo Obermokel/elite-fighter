@@ -120,10 +120,33 @@ public class CombatZoneThread extends Thread implements JournalUpdateListener, S
 		// Do we have a good target?
 		if (this.lookupMostPromisingShip() == null || (System.currentTimeMillis() - this.lookupMostPromisingShip().getLastSeen()) > 60_000L) {
 			// None at all. Cycle through all targets.
-			this.taskPool.execute(this.appctx.getBean(SelectNextTargetTask.class));
+			// Wait 10 seconds if the current targeted ship is not yet at scan stage 3.
+			ScannedShip targetedShip = this.gameStatus.getTargetedShip();
+			if (targetedShip == null || MiscUtil.getAsInt(targetedShip.getScanStage(), 0).intValue() == 3) {
+				// None targeted or already at stage 3
+				this.taskPool.execute(this.appctx.getBean(SelectNextTargetTask.class));
+			} else {
+				long targetedForMillis = System.currentTimeMillis() - targetedShip.getLastSeen();
+				if (targetedForMillis > 10_000) {
+					// Should have been scanned by now
+					this.taskPool.execute(this.appctx.getBean(SelectNextTargetTask.class));
+				}
+			}
 		} else if (!this.isMostPromisingShipTargeted()) {
 			// Yes, but not selected. Cycle through hostile targets.
+			//logger.debug("Searching for most promising target: " + this.lookupMostPromisingShip());
 			this.taskPool.execute(this.appctx.getBean(SelectNextHostileTargetTask.class));
+		} else {
+			// Cycle through other hostile targets if our current target has been focused for a long time
+			ScannedShip targetedShip = this.gameStatus.getTargetedShip();
+			if (targetedShip != null) {
+				long targetedForMillis = System.currentTimeMillis() - targetedShip.getLastSeen();
+				if (targetedForMillis > 10_000) {
+					// Should have been scanned by now
+					logger.debug("Searching for other hostile targets");
+					this.taskPool.execute(this.appctx.getBean(SelectNextHostileTargetTask.class));
+				}
+			}
 		}
 	}
 

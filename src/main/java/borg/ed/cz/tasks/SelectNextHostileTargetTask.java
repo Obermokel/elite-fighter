@@ -24,7 +24,7 @@ public class SelectNextHostileTargetTask extends Thread {
 	public void run() {
 		try {
 			long now = System.currentTimeMillis();
-			if (now - lastExecuted > 1000) {
+			if (now - lastExecuted > 500) {
 				lastExecuted = now;
 				Thread.sleep(this.shipControl.selectNextHostileTarget() + 50 + this.random.nextInt(100));
 			}
