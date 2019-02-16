@@ -67,7 +67,7 @@ public class ScannedShip {
 		ship.setShieldHealth(event.getShieldHealth());
 		ship.setHullHealth(event.getHullHealth());
 		ship.setBounty(event.getBounty());
-		ship.setLastSeen(event.getTimestamp().toInstant().toEpochMilli());
+		//ship.setLastSeen(event.getTimestamp().toInstant().toEpochMilli());
 		return ship;
 	}
 
@@ -86,7 +86,8 @@ public class ScannedShip {
 		String bountyRed = "<span style=\"color: " + red(MiscUtil.getAsInt(this.bounty, 0) / 200_000f) + ";\">";
 		String shieldBlue = "<span style=\"color: " + blue(MiscUtil.getAsInt(this.ShieldHealth, 100) / 100f) + ";\">";
 		String hullOrange = "<span style=\"color: " + orange(MiscUtil.getAsInt(this.HullHealth, 100) / 100f) + ";\">";
-		return String.format(Locale.US, "%s %s (%s, " + bountyRed + "%,d CR bounty</span>, " + shieldBlue + "S:%d%%</span>, " + hullOrange + "H:%d%%</span>, %s)", // Deadly Anaconda (Harry Potter, 241,500 CR bounty, S:62%, H:100%)
+		return String.format(Locale.US, "[%d] %s %s (%s, " + bountyRed + "%,d CR bounty</span>, " + shieldBlue + "S:%d%%</span>, " + hullOrange + "H:%d%%</span>, %s)", // Deadly Anaconda (Harry Potter, 241,500 CR bounty, S:62%, H:100%)
+				MiscUtil.getAsInt(this.ScanStage, 0), // ScanStage
 				MiscUtil.getAsString(this.pilotRank, "??RANK??"), // rank
 				MiscUtil.getAsString(this.ship, "??SHIP??"), // ship
 				MiscUtil.getAsString(this.pilotName, "??PILOT??"), // pilot

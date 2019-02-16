@@ -22,6 +22,7 @@ import javax.swing.SwingConstants;
 import borg.ed.cz.data.GameStatus;
 import borg.ed.cz.data.GameStatusListener;
 import borg.ed.cz.data.ScannedShip;
+import borg.ed.cz.tasks.SelectNextTargetTask;
 import borg.ed.galaxy.journal.JournalUpdateListener;
 import borg.ed.galaxy.journal.Status;
 import borg.ed.galaxy.journal.StatusUpdateListener;
@@ -154,6 +155,16 @@ public class CombatControlFrame extends JFrame implements WindowListener, KeyLis
 	@Override
 	public void onNewGameStatus(GameStatus status) {
 		StringBuilder scannedShips = new StringBuilder();
+		if (status.getAttackedShip() == null) {
+			scannedShips.append("ATTACKING: ---\n\n");
+		} else {
+			scannedShips.append("ATTACKING: " + status.getAttackedShip().toHtmlString() + "\n\n");
+		}
+		if (status.getTargetedShip() == null) {
+			scannedShips.append("SELECTED: ---\n\n");
+		} else {
+			scannedShips.append("SELECTED: " + status.getTargetedShip().toHtmlString() + "\n\n");
+		}
 		for (ScannedShip ship : status.getScannedShips()) {
 			scannedShips.append(ship.toHtmlString() + "\n");
 		}
@@ -168,6 +179,7 @@ public class CombatControlFrame extends JFrame implements WindowListener, KeyLis
 		text.append("<br>").append("Last fighter: ").append(status.getLastFighterDeployed());
 		text.append("<br>").append(status.isFighterDeployed() ? SPAN_ACTIVE : SPAN_INACTIVE).append("Fighter deployed").append(SPAN_CLOSE);
 		text.append("<br>").append(status.isFighterRebuilt() ? SPAN_ACTIVE : SPAN_INACTIVE).append("Fighter rebuilt").append(SPAN_CLOSE);
+		text.append("<br>").append(SelectNextTargetTask.isNextExecutionAllowed() ? SPAN_ACTIVE : SPAN_INACTIVE).append("Allow next target").append(SPAN_CLOSE);
 
 		text.append("</html>");
 
